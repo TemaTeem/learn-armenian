@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>LearnArmenian - Тренировка</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="game-nav">
+            <a href="game.html" class="active">🎮 Игра</a>
+            <a href="profile.html">👤 Профиль</a>
+            <button id="logout-btn" class="logout-small">🚪 Выйти</button>
+        </nav>
+
+        <div id="mode-selection" class="mode-selection">
+            <h2>Выберите режим игры</h2>
+            <div class="mode-cards">
+                <div class="mode-card" data-mode="RUS_ARM">
+                    <div class="mode-icon">🇷🇺➡️🇦🇲</div>
+                    <h3>Русский → Армянский</h3>
+                    <p>Вам показывают русское слово, нужно выбрать армянский перевод</p>
+                    <button class="mode-btn">Выбрать</button>
+                </div>
+                <div class="mode-card" data-mode="ARM_RUS">
+                    <div class="mode-icon">🇦🇲➡️🇷🇺</div>
+                    <h3>Армянский → Русский</h3>
+                    <p>Вам показывают армянское слово, нужно выбрать русский перевод</p>
+                    <button class="mode-btn">Выбрать</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-area" class="game-area" style="display: none;">
+            <div class="game-header">
+                <div class="mode-badge" id="mode-badge">🇷🇺➡️🇦🇲</div>
+                <div class="score">⭐ Счёт: <span id="score">0</span></div>
+                <div class="question-counter">Вопрос <span id="current-q">1</span>/<span id="total-q">10</span></div>
+            </div>
+            <div class="question-card">
+                <h2 id="question-text">Загрузка...</h2>
+                <div id="answers-container" class="answers-grid"></div>
+            </div>
+            <div class="game-message" id="game-message"></div>
+            <button id="next-btn" class="next-btn" style="display: none;">➡ Следующий вопрос</button>
+            <button id="back-to-menu" class="back-btn">🏠 Выйти в меню</button>
+        </div>
+
+        <div class="result-modal" id="result-modal" style="display: none;">
+            <div class="modal-content">
+                <h2>🏆 Результаты</h2>
+                <p id="result-mode-text"></p>
+                <p>Правильных ответов: <span id="result-correct">0</span>/<span id="result-total">10</span></p>
+                <p>Набрано очков: <span id="result-score">0</span></p>
+                <button id="restart-game">🔄 Играть снова</button>
+                <button id="change-mode">🔄 Сменить режим</button>
+                <a href="profile.html" class="profile-link">📊 Посмотреть прогресс</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
+    <script src="script.js"></script>
+    
+    <script>
+        // Принудительная перепривязка кнопок
+        function bindGameButtons() {
+            const modeCards = document.querySelectorAll('.mode-card');
+            modeCards.forEach(card => {
+                const newCard = card.cloneNode(true);
+                card.parentNode.replaceChild(newCard, card);
+                const mode = newCard.dataset.mode;
+                const btn = newCard.querySelector('.mode-btn');
+                
+                newCard.addEventListener('click', () => {
+                    if (mode && typeof startGameWithMode === 'function') {
+                        startGameWithMode(mode);
+                    }
+                });
+                
+                if (btn) {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (mode && typeof startGameWithMode === 'function') {
+                            startGameWithMode(mode);
+                        }
+                    });
+                }
+            });
+        }
+        setTimeout(bindGameButtons, 500);
+        setTimeout(bindGameButtons, 1500);
+    </script>
+    <script>
+    // Полная переинициализация игры при каждой загрузке страницы
+    (function initGameForce() {
+        // Ждём загрузки Firebase и DOM
+        const checkInterval = setInterval(() => {
+            if (typeof auth !== 'undefined' && auth.currentUser && document.querySelector('.mode-card')) {
+                clearInterval(checkInterval);
+                console.log("🎮 Принудительная инициализация игры");
+                
+                // Находим все карточки режимов
+                const cards = document.querySelectorAll('.mode-card');
+                cards.forEach(card => {
+                    // Удаляем старые обработчики через клонирование
+                    const newCard = card.cloneNode(true);
+                    card.parentNode.replaceChild(newCard, card);
+                    
+                    const mode = newCard.dataset.mode;
+                    const btn = newCard.querySelector('.mode-btn');
+                    
+                    // Обработчик клика по карточке
+                    newCard.onclick = () => {
+                        console.log("Выбран режим:", mode);
+                        if (mode === 'RUS_ARM') {
+                            startGameRusArm();
+                        } else if (mode === 'ARM_RUS') {
+                            startGameArmRus();
+                        } else if (typeof startGameWithMode === 'function') {
+                            startGameWithMode(mode);
+                        } else {
+                            // Самый простой способ - через глобальную переменную
+                            window.currentGameMode = mode;
+                            document.getElementById('mode-selection').style.display = 'none';
+                            document.getElementById('game-area').style.display = 'block';
+                            alert("Режим выбран: " + (mode === 'RUS_ARM' ? 'Русский → Армянский' : 'Армянский → Русский'));
+                        }
+                    };
+                    
+                    // Обработчик кнопки
+                    if (btn) {
+                        btn.onclick = (e) => {
+                            e.stopPropagation();
+                            newCard.onclick();
+                        };
+                    }
+                });
+                
+                // Кнопка выхода
+                const logoutBtn = document.getElementById('logout-btn');
+                if (logoutBtn) logoutBtn.onclick = () => { auth.signOut(); window.location.href = 'index.html'; };
+            }
+        }, 500);
+        
+        // Остановить проверку через 5 секунд
+        setTimeout(() => clearInterval(checkInterval), 5000);
+    })();
+</script>
+<script>
+    // Полная перезагрузка игры при каждом входе на страницу
+    (async function resetAndInit() {
+        // Ждём Firebase
+        const waitForFirebase = setInterval(() => {
+            if (typeof auth !== 'undefined' && auth.currentUser) {
+                clearInterval(waitForFirebase);
+                console.log("🔄 Перезагрузка игры после профиля...");
+                
+                // Показываем загрузку
+                const modeDiv = document.getElementById('mode-selection');
+                if (modeDiv) {
+                    modeDiv.innerHTML = '<div class="loading-container"><p>📥 Загрузка слов...</p></div>';
+                }
+                
+                // Перезагружаем слова
+                if (typeof loadWordsFromGoogleSheets === 'function') {
+                    loadWordsFromGoogleSheets().then(words => {
+                        if (words && words.length > 0) {
+                            window.wordsDatabase = words;
+                            console.log("✅ Слова загружены:", words.length);
+                            
+                            // Восстанавливаем интерфейс выбора режима
+                            if (modeDiv) {
+                                modeDiv.innerHTML = `
+                                    <h2>Выберите режим игры</h2>
+                                    <div class="mode-cards">
+                                        <div class="mode-card" data-mode="RUS_ARM">
+                                            <div class="mode-icon">🇷🇺➡️🇦🇲</div>
+                                            <h3>Русский → Армянский</h3>
+                                            <p>Вам показывают русское слово, нужно выбрать армянский перевод</p>
+                                            <button class="mode-btn">Выбрать</button>
+                                        </div>
+                                        <div class="mode-card" data-mode="ARM_RUS">
+                                            <div class="mode-icon">🇦🇲➡️🇷🇺</div>
+                                            <h3>Армянский → Русский</h3>
+                                            <p>Вам показывают армянское слово, нужно выбрать русский перевод</p>
+                                            <button class="mode-btn">Выбрать</button>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                            
+                            // Привязываем кнопки
+                            document.querySelectorAll('.mode-card').forEach(card => {
+                                const newCard = card.cloneNode(true);
+                                card.parentNode.replaceChild(newCard, card);
+                                const mode = newCard.dataset.mode;
+                                const btn = newCard.querySelector('.mode-btn');
+                                
+                                const startGame = () => {
+                                    console.log("🎮 Запуск:", mode);
+                                    if (typeof startGameWithMode === 'function') {
+                                        startGameWithMode(mode);
+                                    } else if (window.wordsDatabase && window.wordsDatabase.length) {
+                                        // Запасной запуск
+                                        window.currentMode = mode;
+                                        document.getElementById('mode-selection').style.display = 'none';
+                                        document.getElementById('game-area').style.display = 'block';
+                                        document.getElementById('mode-badge').innerHTML = mode === 'RUS_ARM' ? '🇷🇺 РУССКИЙ → АРМЯНСКИЙ 🇦🇲' : '🇦🇲 АРМЯНСКИЙ → РУССКИЙ 🇷🇺';
+                                        if (typeof startNewGame === 'function') startNewGame();
+                                    } else {
+                                        alert("Слова ещё не загружены. Подождите секунду.");
+                                    }
+                                };
+                                
+                                newCard.onclick = startGame;
+                                if (btn) btn.onclick = (e) => { e.stopPropagation(); startGame(); };
+                            });
+                        }
+                    }).catch(err => console.error("Ошибка загрузки слов:", err));
+                } else {
+                    // Если функции нет — просто перезагружаем страницу
+                    location.reload();
+                }
+            }
+        }, 500);
+        
+        setTimeout(() => clearInterval(waitForFirebase), 10000);
+    })();
+</script>
+<script>
+    // Полная запасная игровая логика (если script.js не работает)
+    (function setupFullGame() {
+        // Ждём загрузки Firebase и слов
+        let checkInterval = setInterval(() => {
+            if (window.wordsDatabase && window.wordsDatabase.length > 0) {
+                clearInterval(checkInterval);
+                console.log("🎮 Запасная логика активирована, слов:", window.wordsDatabase.length);
+                
+                // Переопределяем startGameWithMode
+                window.startGameWithMode = async function(mode) {
+                    console.log("🚀 Запуск игры через запасную логику, режим:", mode);
+                    window.currentMode = mode;
+                    
+                    // Скрываем выбор режима, показываем игру
+                    document.getElementById('mode-selection').style.display = 'none';
+                    document.getElementById('game-area').style.display = 'block';
+                    const badge = document.getElementById('mode-badge');
+                    if (badge) badge.innerHTML = mode === 'RUS_ARM' ? '🇷🇺 РУССКИЙ → АРМЯНСКИЙ 🇦🇲' : '🇦🇲 АРМЯНСКИЙ → РУССКИЙ 🇷🇺';
+                    
+                    // Запускаем новую игру
+                    await startGameLocal();
+                };
+                
+                async function startGameLocal() {
+                    const allWords = window.wordsDatabase;
+                    // Перемешиваем и берём 10 слов
+                    const shuffled = [...allWords];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+                    const selected = shuffled.slice(0, Math.min(10, allWords.length));
+                    
+                    // Формируем вопросы
+                    window.currentQuestions = selected.map(word => {
+                        let question, correct;
+                        if (window.currentMode === 'RUS_ARM') {
+                            question = word.russian;
+                            correct = word.armenian;
+                        } else {
+                            question = word.armenian;
+                            correct = word.russian;
+                        }
+                        // Генерируем варианты (3 случайных других перевода)
+                        let candidates = [];
+                        if (window.currentMode === 'RUS_ARM') {
+                            candidates = allWords.filter(w => w.russian !== word.russian).map(w => w.armenian);
+                        } else {
+                            candidates = allWords.filter(w => w.armenian !== word.armenian).map(w => w.russian);
+                        }
+                        // Перемешиваем и берём 3 уникальных
+                        const shuffledCand = [...candidates];
+                        for (let i = shuffledCand.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [shuffledCand[i], shuffledCand[j]] = [shuffledCand[j], shuffledCand[i]];
+                        }
+                        const wrong = shuffledCand.slice(0, 3);
+                        const options = [correct, ...wrong];
+                        // Перемешиваем варианты
+                        for (let i = options.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [options[i], options[j]] = [options[j], options[i]];
+                        }
+                        return { id: word.id, question, correctAnswer: correct, options };
+                    });
+                    
+                    window.currentQuestionIndex = 0;
+                    window.currentScore = 0;
+                    window.correctAnswers = 0;
+                    window.gameActive = true;
+                    
+                    document.getElementById('score').innerText = '0';
+                    document.getElementById('total-q').innerText = window.currentQuestions.length;
+                    document.getElementById('current-q').innerText = '1';
+                    document.getElementById('game-message').innerHTML = '';
+                    document.getElementById('next-btn').style.display = 'none';
+                    
+                    loadQuestionLocal();
+                }
+                
+                function loadQuestionLocal() {
+                    if (!window.gameActive) return;
+                    const q = window.currentQuestions[window.currentQuestionIndex];
+                    const text = (window.currentMode === 'RUS_ARM') 
+                        ? `Как перевести "${q.question}" на армянский?`
+                        : `Как перевести "${q.question}" на русский?`;
+                    document.getElementById('question-text').innerHTML = text;
+                    document.getElementById('current-q').innerText = window.currentQuestionIndex + 1;
+                    
+                    const container = document.getElementById('answers-container');
+                    container.innerHTML = '';
+                    q.options.forEach(opt => {
+                        const btn = document.createElement('button');
+                        btn.innerText = opt;
+                        btn.classList.add('answer-btn');
+                        btn.onclick = () => checkAnswerLocal(btn, opt, q.correctAnswer, q.id);
+                        container.appendChild(btn);
+                    });
+                    document.getElementById('next-btn').style.display = 'none';
+                }
+                
+                async function checkAnswerLocal(btn, selected, correct, wordId) {
+                    if (!window.gameActive) return;
+                    const allBtns = document.querySelectorAll('.answer-btn');
+                    if (Array.from(allBtns).some(b => b.disabled)) return;
+                    const isCorrect = selected === correct;
+                    if (isCorrect) {
+                        btn.classList.add('correct');
+                        window.currentScore += 10;
+                        window.correctAnswers++;
+                        document.getElementById('score').innerText = window.currentScore;
+                        document.getElementById('game-message').innerHTML = '✅ Правильно! +10';
+                        document.getElementById('game-message').style.color = '#48bb78';
+                    } else {
+                        btn.classList.add('wrong');
+                        document.getElementById('game-message').innerHTML = `❌ Неправильно! Правильно: ${correct}`;
+                        document.getElementById('game-message').style.color = '#f56565';
+                        allBtns.forEach(b => { if (b.innerText === correct) b.classList.add('correct'); });
+                    }
+                    allBtns.forEach(b => b.disabled = true);
+                    window.currentQuestionIndex++;
+                    if (window.currentQuestionIndex < window.currentQuestions.length) {
+                        document.getElementById('next-btn').style.display = 'block';
+                    } else {
+                        await endGameLocal();
+                    }
+                }
+                
+                async function endGameLocal() {
+                    window.gameActive = false;
+                    const modeText = window.currentMode === 'RUS_ARM' ? '🇷🇺 Русский → Армянский 🇦🇲' : '🇦🇲 Армянский → Русский 🇷🇺';
+                    document.getElementById('result-mode-text').innerHTML = modeText;
+                    document.getElementById('result-correct').innerText = window.correctAnswers;
+                    document.getElementById('result-total').innerText = window.currentQuestions.length;
+                    document.getElementById('result-score').innerText = window.currentScore;
+                    document.getElementById('result-modal').style.display = 'flex';
+                    
+                    // Сохраняем прогресс
+                    const user = auth.currentUser;
+                    if (user) {
+                        const userRef = db.collection('users').doc(user.uid);
+                        const doc = await userRef.get();
+                        if (doc.exists) {
+                            const data = doc.data();
+                            const update = {
+                                totalScore: (data.totalScore || 0) + window.currentScore,
+                                totalCorrect: (data.totalCorrect || 0) + window.correctAnswers,
+                                gamesPlayed: (data.gamesPlayed || 0) + 1
+                            };
+                            if (window.currentMode === 'RUS_ARM') {
+                                update.rusArmStats = {
+                                    score: (data.rusArmStats?.score || 0) + window.currentScore,
+                                    correct: (data.rusArmStats?.correct || 0) + window.correctAnswers,
+                                    games: (data.rusArmStats?.games || 0) + 1
+                                };
+                            } else {
+                                update.armRusStats = {
+                                    score: (data.armRusStats?.score || 0) + window.currentScore,
+                                    correct: (data.armRusStats?.correct || 0) + window.correctAnswers,
+                                    games: (data.armRusStats?.games || 0) + 1
+                                };
+                            }
+                            await userRef.update(update);
+                        }
+                    }
+                }
+                
+                // Назначаем обработчики для кнопок результата
+                document.getElementById('restart-game').onclick = () => {
+                    document.getElementById('result-modal').style.display = 'none';
+                    startGameLocal();
+                };
+                document.getElementById('change-mode').onclick = () => {
+                    document.getElementById('result-modal').style.display = 'none';
+                    document.getElementById('game-area').style.display = 'none';
+                    document.getElementById('mode-selection').style.display = 'block';
+                    window.currentMode = null;
+                };
+                document.getElementById('next-btn').onclick = () => {
+                    if (window.currentQuestionIndex < window.currentQuestions.length) loadQuestionLocal();
+                };
+                document.getElementById('back-to-menu').onclick = () => {
+                    if (confirm('Выйти в меню?')) {
+                        document.getElementById('game-area').style.display = 'none';
+                        document.getElementById('mode-selection').style.display = 'block';
+                        window.currentMode = null;
+                    }
+                };
+            }
+        }, 500);
+    })();
+</script>
+</body>
+</html>
