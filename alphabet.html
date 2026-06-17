@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LearnArmenian - Алфавит</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <nav class="game-nav">
+            <a href="game.html">🎮 Игра</a>
+            <a href="alphabet.html" class="active">🔤 Алфавит</a>
+            <a href="alphabet-practice.html">📝 Тренировка</a>
+            <a href="profile.html">👤 Профиль</a>
+            <button id="logout-btn" class="logout-small">🚪 Выйти</button>
+        </nav>
+
+        <div class="alphabet-container">
+            <h2>Армянский алфавит</h2>
+            <div id="alphabet-grid" class="alphabet-grid">
+                <!-- Буквы будут подставлены сюда -->
+                <p class="loading">Загрузка алфавита...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

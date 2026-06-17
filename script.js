@@ -9,7 +9,8 @@ const firebaseConfig = {
 };
 
 // ========== НАСТРОЙКИ GOOGLE SHEETS ==========
-const SHEET_URL = "https://script.google.com/macros/s/AKfycbz_pJsO9okF08adnS3aR80LmdVMlpImII3qwnpNUoppUVeFpq86UDofN31NQgVS-Js9/exec";
+const SHEET_URL_BASE = "https://script.google.com/macros/s/AKfycby29REM7ykGovhBuNb755KGIwR6Swi_vdH9oPE1oVV2MO74azqtf74UpkTitYbZKoAM/exec";
+
 
 // ========== НАСТРОЙКИ ==========
 const WEIGHT_SETTINGS = {
@@ -40,6 +41,7 @@ let correctAnswers = 0;
 let gameActive = false;
 let currentGameWords = [];
 let gamesSinceReset = { RUS_ARM: 0, ARM_RUS: 0 };
+let alphabetData = [];
 
 // ========== ОБЩИЕ ФУНКЦИИ ==========
 function shuffleArray(arr) {
@@ -92,10 +94,12 @@ function parseCSVToWords(csvText) {
     return words;
 }
 
-async function loadWordsFromGoogleSheets() {
+async function loadWordsFromGoogleSheets(sheetName = 'Words') {
+    const url = SHEET_URL_BASE + '?sheet=' + sheetName;
+    // остальной код без изменений
     try {
-        console.log("📥 Загрузка слов...");
-        const response = await fetch(SHEET_URL, { mode: 'cors', headers: { 'Accept': 'text/csv, text/plain, */*' } });
+        console.log(`📥 Загрузка из листа ${sheetName}...`);
+        const response = await fetch(url, { mode: 'cors', headers: { 'Accept': 'text/csv, text/plain, */*' } });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const csvText = await response.text();
         if (!csvText || csvText.trim().length === 0) throw new Error("Таблица пуста");
@@ -105,6 +109,41 @@ async function loadWordsFromGoogleSheets() {
         return words;
     } catch (error) {
         console.error("❌ Ошибка:", error);
+        return [];
+    }
+}
+
+async function loadAlphabetFromGoogleSheets() {
+    const url = SHEET_URL_BASE + '?sheet=Alphabet';
+    try {
+        console.log("📥 Загрузка алфавита...");
+        const response = await fetch(url, { mode: 'cors', headers: { 'Accept': 'text/csv, text/plain, */*' } });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const csvText = await response.text();
+        if (!csvText || csvText.trim().length === 0) throw new Error("Таблица алфавита пуста");
+        
+        // Парсим CSV
+        const lines = csvText.split('\n').filter(line => line.trim());
+        if (lines.length < 2) return [];
+        const headers = parseCSVLine(lines[0]);
+        const letterIdx = headers.findIndex(h => h.toLowerCase().trim() === 'letter');
+        const nameIdx = headers.findIndex(h => h.toLowerCase().trim() === 'name');
+        const pronIdx = headers.findIndex(h => h.toLowerCase().trim() === 'pronunciation');
+        const exIdx = headers.findIndex(h => h.toLowerCase().trim() === 'example');
+        
+        const alphabet = [];
+        for (let i = 1; i < lines.length; i++) {
+            const values = parseCSVLine(lines[i]);
+            const letter = values[letterIdx]?.trim() || '';
+            const name = values[nameIdx]?.trim() || '';
+            const pronunciation = values[pronIdx]?.trim() || '';
+            const example = values[exIdx]?.trim() || '';
+            if (letter) alphabet.push({ letter, name, pronunciation, example });
+        }
+        console.log(`✅ Загружено ${alphabet.length} букв`);
+        return alphabet;
+    } catch (error) {
+        console.error("❌ Ошибка загрузки алфавита:", error);
         return [];
     }
 }
@@ -192,6 +231,237 @@ function selectWordsWithWeights(mode, count) {
     return selected;
 }
 
+// ========== СТРАНИЦА АЛФАВИТА ==========
+if (window.location.pathname.includes('alphabet.html')) {
+    document.addEventListener('DOMContentLoaded', () => {
+        // Ждём авторизацию через onAuthStateChanged
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            const grid = document.getElementById('alphabet-grid');
+            if (!grid) return;
+            
+            // Показываем загрузку
+            grid.innerHTML = '<p class="loading">Загрузка алфавита...</p>';
+            
+            // Загружаем данные
+            alphabetData = await loadAlphabetFromGoogleSheets();
+            
+            if (alphabetData.length === 0) {
+                grid.innerHTML = '<p class="placeholder">Не удалось загрузить алфавит. Проверьте лист "Alphabet" в таблице.</p>';
+                return;
+            }
+            
+            // Отображаем карточки
+            let html = '';
+            alphabetData.forEach(item => {
+                html += `
+                    <div class="alphabet-card">
+                        <div class="alphabet-letter">${escapeHtml(item.letter)}</div>
+                        <div class="alphabet-name">${escapeHtml(item.name)}</div>
+                        <div class="alphabet-pronunciation">${escapeHtml(item.pronunciation)}</div>
+                        <div class="alphabet-example">${escapeHtml(item.example)}</div>
+                    </div>
+                `;
+            });
+            grid.innerHTML = html;
+        });
+        
+        // Кнопка выхода
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                await auth.signOut();
+                window.location.href = 'index.html';
+            });
+        }
+    });
+}
+
+// ========== СТРАНИЦА ТРЕНИРОВКИ АЛФАВИТА ==========
+if (window.location.pathname.includes('alphabet-practice.html')) {
+    let practiceMode = 'letter-to-name'; // или 'name-to-letter'
+    let practiceQuestions = [];
+    let practiceIndex = 0;
+    let practiceCorrect = 0;
+    let practiceWrong = 0;
+    let practiceActive = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Загружаем алфавит
+            alphabetData = await loadAlphabetFromGoogleSheets();
+
+            if (alphabetData.length === 0) {
+                document.getElementById('practice-question').textContent = '⚠️ Алфавит не загружен. Проверьте лист "Alphabet".';
+                return;
+            }
+
+            // Настройка кнопок переключения режимов
+            document.getElementById('mode-letter-to-name').addEventListener('click', () => {
+                setPracticeMode('letter-to-name');
+            });
+            document.getElementById('mode-name-to-letter').addEventListener('click', () => {
+                setPracticeMode('name-to-letter');
+            });
+
+            // Кнопка "Следующая буква"
+            document.getElementById('practice-next').addEventListener('click', () => {
+                loadNextQuestion();
+            });
+
+            // Запускаем тренировку
+            setPracticeMode('letter-to-name');
+
+            // Кнопка выхода
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', async () => {
+                    await auth.signOut();
+                    window.location.href = 'index.html';
+                });
+            }
+        });
+    });
+
+    function setPracticeMode(mode) {
+        practiceMode = mode;
+        // Обновляем активную кнопку
+        document.querySelectorAll('.mode-switcher .mode-btn').forEach(btn => btn.classList.remove('active'));
+        if (mode === 'letter-to-name') {
+            document.getElementById('mode-letter-to-name').classList.add('active');
+        } else {
+            document.getElementById('mode-name-to-letter').classList.add('active');
+        }
+        // Сбрасываем статистику
+        practiceCorrect = 0;
+        practiceWrong = 0;
+        updateStats();
+        // Перемешиваем и запускаем
+        startPractice();
+    }
+
+    function startPractice() {
+        // Берём все буквы, перемешиваем
+        const shuffled = shuffleArray([...alphabetData]);
+        practiceQuestions = shuffled.slice(0, Math.min(shuffled.length, 20)); // максимум 20 для тренировки
+        practiceIndex = 0;
+        practiceActive = true;
+        document.getElementById('practice-message').textContent = '';
+        document.getElementById('practice-next').style.display = 'none';
+        loadNextQuestion();
+    }
+
+    function loadNextQuestion() {
+        if (!practiceActive) return;
+        if (practiceIndex >= practiceQuestions.length) {
+            document.getElementById('practice-question').textContent = '🏆 Тренировка завершена!';
+            document.getElementById('practice-options').innerHTML = '';
+            document.getElementById('practice-message').textContent = 'Отличная работа!';
+            document.getElementById('practice-next').style.display = 'none';
+            practiceActive = false;
+            return;
+        }
+
+        const item = practiceQuestions[practiceIndex];
+        const questionEl = document.getElementById('practice-question');
+        const optionsContainer = document.getElementById('practice-options');
+        const messageEl = document.getElementById('practice-message');
+        const nextBtn = document.getElementById('practice-next');
+
+        // Готовим вопрос и правильный ответ
+        let correctAnswer, displayText, options;
+        if (practiceMode === 'letter-to-name') {
+            // Показываем букву, нужно выбрать название
+            displayText = item.letter; // например, "ա"
+            correctAnswer = item.name; // например, "Айб"
+            // Варианты: названия всех букв, перемешанные, кроме правильного
+            const allNames = alphabetData.map(i => i.name);
+            const wrongNames = allNames.filter(n => n !== correctAnswer);
+            const shuffledWrong = shuffleArray(wrongNames).slice(0, 3);
+            options = shuffleArray([correctAnswer, ...shuffledWrong]);
+        } else {
+            // Показываем название, нужно выбрать букву
+            displayText = item.name; // например, "Айб"
+            correctAnswer = item.letter; // например, "ա"
+            const allLetters = alphabetData.map(i => i.letter);
+            const wrongLetters = allLetters.filter(l => l !== correctAnswer);
+            const shuffledWrong = shuffleArray(wrongLetters).slice(0, 3);
+            options = shuffleArray([correctAnswer, ...shuffledWrong]);
+        }
+
+        // Отображаем вопрос
+        questionEl.textContent = displayText;
+
+        // Генерируем кнопки вариантов
+        optionsContainer.innerHTML = '';
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.textContent = opt;
+            btn.dataset.value = opt;
+            btn.addEventListener('click', () => handlePracticeAnswer(btn, opt, correctAnswer));
+            optionsContainer.appendChild(btn);
+        });
+
+        messageEl.textContent = '';
+        nextBtn.style.display = 'none';
+    }
+
+    function handlePracticeAnswer(btn, selected, correct) {
+        const allBtns = document.querySelectorAll('#practice-options button');
+        if (Array.from(allBtns).some(b => b.disabled)) return;
+
+        const isCorrect = (selected === correct);
+        if (isCorrect) {
+            btn.classList.add('correct');
+            practiceCorrect++;
+            document.getElementById('practice-message').textContent = '✅ Правильно!';
+            document.getElementById('practice-message').style.color = '#48bb78';
+        } else {
+            btn.classList.add('wrong');
+            practiceWrong++;
+            document.getElementById('practice-message').textContent = `❌ Неправильно! Правильно: ${correct}`;
+            document.getElementById('practice-message').style.color = '#f56565';
+            // Показать правильный ответ
+            allBtns.forEach(b => {
+                if (b.dataset.value === correct) {
+                    b.classList.add('correct');
+                }
+            });
+        }
+
+        // Блокируем все кнопки
+        allBtns.forEach(b => b.disabled = true);
+
+        // Обновляем статистику
+        updateStats();
+
+        // Показываем кнопку "Следующий"
+        practiceIndex++;
+        if (practiceIndex < practiceQuestions.length) {
+            document.getElementById('practice-next').style.display = 'block';
+        } else {
+            // Если это был последний вопрос, показываем кнопку для завершения
+            document.getElementById('practice-next').style.display = 'block';
+            document.getElementById('practice-next').textContent = '🏁 Завершить тренировку';
+        }
+    }
+
+    function updateStats() {
+        document.getElementById('practice-correct').textContent = practiceCorrect;
+        document.getElementById('practice-wrong').textContent = practiceWrong;
+    }
+}
+
+
 // ========== ТАБЛИЦА ЛИДЕРОВ ==========
 async function loadLeaderboard() {
     const container = document.getElementById('leaderboard');
@@ -278,6 +548,7 @@ if (window.location.pathname.includes('index.html') || window.location.pathname 
 }
 
 // ========== СТРАНИЦА ИГРЫ ==========
+
 if (window.location.pathname.includes('game.html')) {
     let isInitialized = false;
     
@@ -288,14 +559,12 @@ if (window.location.pathname.includes('game.html')) {
             return;
         }
         
-        // Всегда перезагружаем слова при входе в игру (чтобы после профиля были свежие)
         console.log("🔄 Инициализация игры, загрузка слов...");
         const modeDiv = document.getElementById('mode-selection');
         if (modeDiv) {
             modeDiv.innerHTML = `<div class="loading-container"><p>📥 Загрузка слов...</p></div>`;
         }
         
-        // Загружаем слова (если уже есть в памяти, всё равно перезагружаем, чтобы быть уверенными)
         wordsDatabase = await loadWordsFromGoogleSheets();
         
         if (wordsDatabase.length < 4) {
@@ -305,13 +574,11 @@ if (window.location.pathname.includes('game.html')) {
             return;
         }
         
-        // Загружаем веса (только если нет, но можно и заново)
         if (Object.keys(wordsWeights.RUS_ARM).length === 0) {
             await loadWeightsFromFirebase(user.uid, 'RUS_ARM');
             await loadWeightsFromFirebase(user.uid, 'ARM_RUS');
         }
         
-        // Восстанавливаем интерфейс выбора режима
         if (modeDiv) {
             modeDiv.innerHTML = `
                 <h2>Выберите режим игры</h2>
@@ -332,10 +599,8 @@ if (window.location.pathname.includes('game.html')) {
             `;
         }
         
-        // Привязываем обработчики кнопок
         attachModeButtons();
         
-        // Кнопка выхода
         const logoutBtn = document.getElementById('logout-btn');
         if (logoutBtn) {
             logoutBtn.onclick = async () => {
@@ -350,7 +615,6 @@ if (window.location.pathname.includes('game.html')) {
     function attachModeButtons() {
         const cards = document.querySelectorAll('.mode-card');
         cards.forEach(card => {
-            // Удаляем старые обработчики через клонирование (чистый способ)
             const newCard = card.cloneNode(true);
             card.parentNode.replaceChild(newCard, card);
             const mode = newCard.dataset.mode;
@@ -369,21 +633,14 @@ if (window.location.pathname.includes('game.html')) {
         });
     }
     
-    // Запускаем инициализацию при загрузке страницы (даже если пришли из профиля)
     document.addEventListener('DOMContentLoaded', () => {
         auth.onAuthStateChanged(user => {
-            if (user) {
-                initGame();
-            } else {
-                window.location.href = 'index.html';
-            }
+            if (user) initGame();
+            else window.location.href = 'index.html';
         });
     });
     
-    // Остальные функции (startGameWithMode, startNewGame и т.д.) остаются без изменений
-    // ... (скопируйте их из предыдущей стабильной версии)
-    // 
-    // Функция старта игры (остаётся без изменений)
+    // Функции игры
     async function startGameWithMode(mode) {
         currentMode = mode;
         if (wordsDatabase.length < 4) {
@@ -396,8 +653,6 @@ if (window.location.pathname.includes('game.html')) {
         await startNewGame();
     }
     
-    // Остальные функции (startNewGame, loadQuestion, checkAnswer, endGame) остаются без изменений
-    // ... (скопируйте их из предыдущей версии)    
     async function startNewGame() {
         const selectedWords = selectWordsWithWeights(currentMode, QUESTIONS_PER_GAME);
         currentQuestions = selectedWords.map(word => {
@@ -441,36 +696,74 @@ if (window.location.pathname.includes('game.html')) {
         document.getElementById('next-btn').style.display = 'none';
     }
     
+    async function saveLearnedWord(word, translation) {
+        const user = auth.currentUser;
+        if (!user) return;
+        try {
+            const userRef = db.collection('users').doc(user.uid);
+            const doc = await userRef.get();
+            if (doc.exists) {
+                let learnedWords = doc.data().learnedWords || [];
+                const wordKey = `${currentMode}_${word}`;
+                if (!learnedWords.some(w => w.key === wordKey)) {
+                    learnedWords.push({
+                        key: wordKey,
+                        mode: currentMode,
+                        word: word,
+                        translation: translation,
+                        learnedAt: new Date()
+                    });
+                    await userRef.update({ learnedWords });
+                }
+            }
+        } catch (error) {
+            console.error("Ошибка сохранения выученного слова:", error);
+        }
+    }
+
+    //========ПРОВЕРКА ОТВЕТА
+
     async function checkAnswer(btn, selected, correct, wordId) {
         if (!gameActive) return;
         const allBtns = document.querySelectorAll('.answer-btn');
         if (Array.from(allBtns).some(b => b.disabled)) return;
-        const isCorrect = selected === correct;
+        const isCorrect = (selected === correct);
+        
         if (isCorrect) {
             btn.classList.add('correct');
             currentScore += 10;
             correctAnswers++;
             document.getElementById('score').textContent = currentScore;
-            document.getElementById('game-message').innerHTML = '✅ Правильно! +10';
+            document.getElementById('game-message').innerHTML = '✅ Правильно! +10 очков';
             document.getElementById('game-message').style.color = '#48bb78';
+            saveLearnedWord(currentQuestions[currentQuestionIndex].question, correct);
         } else {
             btn.classList.add('wrong');
-            document.getElementById('game-message').innerHTML = `❌ Неправильно! Правильно: ${correct}`;
+            currentScore = Math.max(0, currentScore - 3);
+            document.getElementById('score').textContent = currentScore;
+            document.getElementById('game-message').innerHTML = `❌ Неправильно! Правильно: ${correct} ( -3 очка )`;
             document.getElementById('game-message').style.color = '#f56565';
-            allBtns.forEach(b => { if (b.textContent === correct) b.classList.add('correct'); });
+            allBtns.forEach(b => { if (b.innerText === correct) b.classList.add('correct'); });
         }
+        
         const user = auth.currentUser;
         if (user) await updateWeight(wordId, isCorrect, user.uid, currentMode);
+        
         if (currentGameWords[currentQuestionIndex]) {
             currentGameWords[currentQuestionIndex].answered = true;
             currentGameWords[currentQuestionIndex].correct = isCorrect;
         }
+        
         allBtns.forEach(b => b.disabled = true);
+        
         currentQuestionIndex++;
         if (currentQuestionIndex < currentQuestions.length) {
-            document.getElementById('next-btn').style.display = 'block';
+        document.getElementById('next-btn').style.display = 'block';
         } else {
-            await endGame();
+             // Игра окончена, но окно результатов не показываем автоматически
+        gameActive = false;  // запрещаем дальнейшие ответы
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('show-results-btn').style.display = 'block';
         }
     }
     
@@ -518,17 +811,31 @@ if (window.location.pathname.includes('game.html')) {
         };
     }
     
-    // Назначаем обработчики для кнопок игры
-    document.getElementById('next-btn')?.addEventListener('click', () => {
-        if (currentQuestionIndex < currentQuestions.length) loadQuestion();
-    });
-    document.getElementById('back-to-menu')?.addEventListener('click', () => {
-        if (confirm('Выйти в меню?')) {
-            document.getElementById('game-area').style.display = 'none';
-            document.getElementById('mode-selection').style.display = 'block';
-            currentMode = null;
-        }
-    });
+    // Обработчики кнопок управления игрой
+    const nextBtn = document.getElementById('next-btn');
+    if (nextBtn) {
+        nextBtn.onclick = () => {
+            if (currentQuestionIndex < currentQuestions.length) loadQuestion();
+        };
+    }
+    // Кнопка "Показать результаты"
+    const showResultsBtn = document.getElementById('show-results-btn');
+    if (showResultsBtn) {
+        showResultsBtn.onclick = async () => {
+            showResultsBtn.style.display = 'none';
+            await endGame();
+        };
+    }    
+    const backBtn = document.getElementById('back-to-menu');
+    if (backBtn) {
+        backBtn.onclick = () => {
+            if (confirm('Выйти в меню?')) {
+                document.getElementById('game-area').style.display = 'none';
+                document.getElementById('mode-selection').style.display = 'block';
+                currentMode = null;
+            }
+        };
+    }
 }
 
 // Страница профиля

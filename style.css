@@ -634,3 +634,219 @@ body {
         font-size: 16px;
     }
 }
+
+/* ========== АЛФАВИТ ========== */
+.alphabet-container {
+    background: white;
+    border-radius: 32px;
+    padding: 32px 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+.alphabet-container h2 {
+    text-align: center;
+    margin-bottom: 24px;
+    color: #333;
+}
+
+.alphabet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 16px;
+}
+
+.alphabet-card {
+    background: #f7f7f7;
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+    transition: all 0.2s;
+    border: 1px solid #e2e8f0;
+}
+
+.alphabet-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.alphabet-letter {
+    font-size: 32px;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 8px;
+}
+
+.alphabet-name {
+    font-size: 14px;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+.alphabet-pronunciation {
+    font-size: 13px;
+    color: #718096;
+    margin: 4px 0;
+}
+
+.alphabet-example {
+    font-size: 12px;
+    color: #a0aec0;
+    word-break: break-word;
+}
+
+@media (max-width: 480px) {
+    .alphabet-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
+    .alphabet-letter {
+        font-size: 26px;
+    }
+}
+
+/* ========== ТРЕНИРОВКА АЛФАВИТА ========== */
+.alphabet-practice-container {
+    background: white;
+    border-radius: 32px;
+    padding: 32px 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+.alphabet-practice-container h2 {
+    text-align: center;
+    margin-bottom: 24px;
+    color: #333;
+}
+
+.mode-switcher {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.mode-switcher .mode-btn {
+    padding: 10px 20px;
+    border: 2px solid #667eea;
+    background: transparent;
+    color: #667eea;
+    border-radius: 40px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.mode-switcher .mode-btn.active {
+    background: #667eea;
+    color: white;
+}
+
+.mode-switcher .mode-btn:hover {
+    background: #667eea;
+    color: white;
+}
+
+.practice-area {
+    margin-top: 20px;
+}
+
+.practice-card {
+    background: #f7f7f7;
+    border-radius: 24px;
+    padding: 32px;
+    text-align: center;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.practice-question {
+    font-size: 64px;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 24px;
+    line-height: 1.2;
+}
+
+.practice-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+}
+
+.practice-options button {
+    padding: 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    background: white;
+    font-size: 18px;
+    font-weight: 500;
+    color: #2d3748;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.practice-options button:hover {
+    background: #f7fafc;
+    border-color: #cbd5e0;
+}
+
+.practice-options button.correct {
+    background: #48bb78;
+    border-color: #38a169;
+    color: white;
+}
+
+.practice-options button.wrong {
+    background: #f56565;
+    border-color: #e53e3e;
+    color: white;
+}
+
+.practice-options button:disabled {
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.practice-message {
+    margin: 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+    min-height: 30px;
+}
+
+.practice-stats {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin-top: 24px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+.practice-stats span {
+    background: #f7f7f7;
+    padding: 8px 16px;
+    border-radius: 20px;
+}
+
+@media (max-width: 480px) {
+    .practice-question {
+        font-size: 48px;
+    }
+    .practice-options {
+        grid-template-columns: 1fr 1fr;
+    }
+    .practice-options button {
+        font-size: 16px;
+        padding: 12px;
+    }
+    .practice-stats {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+}
+
