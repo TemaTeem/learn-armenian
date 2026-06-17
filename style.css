@@ -411,11 +411,14 @@ body {
 
 .mode-cards {
     display: flex;
-    flex-direction: column;
+    flex-direction: column;      /* всегда вертикально (в столбик) */
     gap: 20px;
+    align-items: center;         /* центрирование карточек по центру страницы */
+    width: 100%;
 }
-
 .mode-card {
+    width: 100%;
+    max-width: 400px;            /* чтобы карточки не были слишком широкими */
     background: #f7f7f7;
     border-radius: 24px;
     padding: 24px;
@@ -523,7 +526,7 @@ body {
 
 @media (min-width: 768px) {
     .mode-cards {
-        flex-direction: row;
+        flex-direction: column;
     }
     
     .mode-card {
@@ -849,4 +852,10 @@ body {
         gap: 8px;
     }
 }
-
+/*=====для иконок====*/
+.mode-icon svg {
+    display: block;
+    margin: 0 auto 12px;
+    max-width: 100%;
+    height: auto;
+}

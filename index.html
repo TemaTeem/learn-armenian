@@ -3,29 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>LangGame - Вход / Регистрация</title>
+    <title>LearnArmenian - Вход</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <div class="auth-box">
-            <h1>📖 LangGame</h1>
-            <p>Изучай язык в игре!</p>
-            
+            <h1>🇦🇲 LearnArmenian</h1>
+            <p>Учи армянский в игре!</p>
             <div class="tabs">
                 <button class="tab-btn active" data-tab="login">Вход</button>
                 <button class="tab-btn" data-tab="register">Регистрация</button>
             </div>
-
-            <!-- Форма входа -->
             <form id="login-form" class="auth-form active">
                 <input type="email" id="login-email" placeholder="Email" required>
                 <input type="password" id="login-password" placeholder="Пароль" required>
                 <button type="submit">Войти</button>
                 <div class="error-message" id="login-error"></div>
             </form>
-
-            <!-- Форма регистрации -->
             <form id="register-form" class="auth-form">
                 <input type="text" id="reg-name" placeholder="Ваше имя" required>
                 <input type="email" id="reg-email" placeholder="Email" required>
@@ -35,7 +30,6 @@
             </form>
         </div>
     </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>

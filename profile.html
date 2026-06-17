@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>LearnArmenian - Мой профиль</title>
+    <title>LearnArmenian - Профиль</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,9 +11,8 @@
         <nav class="game-nav">
             <a href="game.html">🎮 Игра</a>
             <a href="alphabet.html">🔤 Алфавит</a>
-            <a href="alphabet-practice.html">📝 Тренировка</a>
             <a href="profile.html" class="active">👤 Профиль</a>
-            <button id="logout-btn-profile" class="logout-small">🚪 Выйти</button>
+            <button id="logout-btn" class="logout-small">🚪 Выйти</button>
         </nav>
 
         <div class="profile-card">
@@ -22,7 +21,6 @@
                 <h2 id="profile-name">Ученик</h2>
                 <p id="profile-email">email@example.com</p>
             </div>
-
             <div class="stats">
                 <div class="stat-item">
                     <span class="stat-value" id="total-score">0</span>
@@ -38,7 +36,6 @@
                 </div>
             </div>
 
-            <!-- 🏆 НОВЫЙ БЛОК: ТАБЛИЦА ЛИДЕРОВ -->
             <div class="leaderboard-section">
                 <h3>🏆 Таблица лидеров (Топ-10)</h3>
                 <div id="leaderboard" class="leaderboard-table">
@@ -48,7 +45,7 @@
             </div>
 
             <div class="progress-section">
-                <h3>📈 Выученные армянские слова</h3>
+                <h3>📈 Выученные слова</h3>
                 <div id="words-list" class="words-list">
                     <p class="placeholder">Пройдите игру, чтобы изучать слова</p>
                 </div>
@@ -65,58 +62,5 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
     <script src="script.js"></script>
-    <script>
-    // Принудительная загрузка таблицы после полной загрузки страницы
-    window.addEventListener('load', function() {
-        setTimeout(function() {
-            if (typeof loadLeaderboard === 'function') {
-                console.log("🔄 Принудительный вызов loadLeaderboard");
-                loadLeaderboard();
-            } else {
-                console.log("⚠️ loadLeaderboard не найдена, ждём ещё...");
-                setTimeout(function() {
-                    if (typeof loadLeaderboard === 'function') loadLeaderboard();
-                }, 2000);
-            }
-        }, 1000);
-    });
-</script>
-    <!-- Принудительная загрузка имени и почты -->
-    <script>
-        setTimeout(function() {
-            if (auth && auth.currentUser) {
-                const user = auth.currentUser;
-                const userId = user.uid;
-                
-                db.collection('users').doc(userId).get().then(doc => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        const nameEl = document.getElementById('profile-name');
-                        const emailEl = document.getElementById('profile-email');
-                        
-                        if (nameEl) nameEl.textContent = data.name || 'Ученик';
-                        if (emailEl) emailEl.textContent = user.email;
-                        
-                        console.log("✅ Принудительно загружено имя:", data.name);
-                        console.log("✅ Принудительно загружен email:", user.email);
-                    }
-                }).catch(err => console.error("Ошибка загрузки имени:", err));
-            } else {
-                console.log("⏳ Пользователь ещё не авторизован, ждём...");
-                setTimeout(() => {
-                    if (auth.currentUser) {
-                        const user = auth.currentUser;
-                        db.collection('users').doc(user.uid).get().then(doc => {
-                            if (doc.exists) {
-                                const data = doc.data();
-                                document.getElementById('profile-name').textContent = data.name || 'Ученик';
-                                document.getElementById('profile-email').textContent = user.email;
-                            }
-                        });
-                    }
-                }, 2000);
-            }
-        }, 1500);
-    </script>
 </body>
 </html>
