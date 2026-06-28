@@ -9,16 +9,16 @@
 <body>
     <!-- SVG-спрайт (скрыт) -->
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none;">
-    <symbol id="icon-rus-arm" viewBox="0 0 40 24">
-        <rect x="0" y="0" width="12" height="24" fill="white"/>
-        <rect x="0" y="8" width="12" height="8" fill="#0039A6"/>
-        <rect x="0" y="16" width="12" height="8" fill="#D52B1E"/>
+    <symbol id="icon-rus-arm">
+        <rect x="28" y="0" width="12" height="24" fill="white"/>
+        <rect x="28" y="8" width="12" height="8" fill="#0039A6"/>
+        <rect x="28" y="16" width="12" height="8" fill="#D52B1E"/>
         <path d="M16 12 L24 12 M20 8 L24 12 L20 16" stroke="#333" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="28" y="0" width="40" height="24" fill="#D90012"/>
-        <rect x="28" y="8" width="40" height="8" fill="#0033A0"/>
-        <rect x="28" y="16" width="40" height="8" fill="#F2A800"/>
+        <rect x="0" y="0" width="12" height="24" fill="#D90012"/>
+        <rect x="0" y="8" width="12" height="8" fill="#0033A0"/>
+        <rect x="0" y="16" width="12" height="8" fill="#F2A800"/>
     </symbol>
-    <symbol id="icon-arm-rus" viewBox="0 0 40 24">
+    <symbol id="icon-arm-rus">
         <rect x="0" y="0" width="12" height="24" fill="#D90012"/>
         <rect x="0" y="8" width="12" height="8" fill="#0033A0"/>
         <rect x="0" y="16" width="12" height="8" fill="#F2A800"/>
@@ -27,61 +27,29 @@
         <rect x="28" y="8" width="12" height="8" fill="#0039A6"/>
         <rect x="28" y="16" width="12" height="8" fill="#D52B1E"/>
     </symbol>
-    <symbol id="icon-alphabet" viewBox="0 0 40 40">
+    <symbol id="icon-alphabet">
         <circle cx="20" cy="20" r="18" fill="#667eea" opacity="0.15"/>
         <text x="20" y="26" font-family="Arial" font-size="24" font-weight="bold" fill="#667eea" text-anchor="middle">Ա</text>
     </symbol>
 </svg>
     <div class="container">
         <nav class="game-nav">
-            <a href="game.html" class="active">🎮 Игра</a>
+            <a href="game.html" class="active">🎮 Тренировка</a>
             <a href="alphabet.html">🔤 Алфавит</a>
             <a href="profile.html">👤 Профиль</a>
             <button id="logout-btn" class="logout-small">🚪 Выйти</button>
         </nav>
 
         <div id="mode-selection" class="mode-selection">
-            <h2>Выберите режим игры</h2>
-            <div class="mode-cards">
-                <div class="mode-card" data-mode="RUS_ARM">
-                    <div class="mode-icon">
-                        <svg width="40" height="24" viewBox="0 0 40 20">
-                            <use href="#icon-rus-arm"/>
-                        </svg>
-                    </div>
-                    <h3>Русский → Армянский</h3>
-                    <p>Вам показывают русское слово, нужно выбрать армянский перевод</p>
-                    <button class="mode-btn">Выбрать</button>
-                </div>
-                <div class="mode-card" data-mode="ARM_RUS">
-                    <div class="mode-icon">
-                        <svg width="40" height="24" viewBox="0 0 40 20">
-                            <use href="#icon-arm-rus"/>
-                        </svg>
-                    </div>
-                    <h3>Армянский → Русский</h3>
-                    <p>Вам показывают армянское слово, нужно выбрать русский перевод</p>
-                    <button class="mode-btn">Выбрать</button>
-                </div>
-                <div class="mode-card" data-mode="ALPHABET">
-                    <div class="mode-icon">
-                        <svg width="40" height="40" viewBox="0 0 40 40">
-                            <use href="#icon-alphabet"/>
-                        </svg>
-                    </div>
-                    <h3>Тренировка алфавита</h3>
-                    <p>Изучайте армянские буквы и их названия</p>
-                    <button class="mode-btn">Выбрать</button>
-                </div>
-            </div>
+            
         </div>
 
         <div id="game-area" class="game-area" style="display: none;">
             <div class="game-header">
-                <div class="mode-badge" id="mode-badge">🇷🇺➡️🇦🇲</div>
+                <!-- <div class="mode-badge" id="mode-badge">🇷🇺➡️🇦🇲</div> -->
                 <div id="alphabet-direction-switch" style="display: none;">
-                    <button id="dir-letter-to-name" class="mode-btn active">Буква → Название</button>
-                    <button id="dir-name-to-letter" class="mode-btn">Название → Буква</button>
+                    <button id="dir-letter-to-name" class="mode-btn active">ARM → RUS</button>
+                    <button id="dir-name-to-letter" class="mode-btn">RUS → ARM</button>
                 </div>
                 <div class="score">⭐ Счёт: <span id="score">0</span></div>
                 <div class="question-counter">Вопрос <span id="current-q">1</span>/<span id="total-q">10</span></div>
@@ -108,11 +76,10 @@
             </div>
         </div>
     </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
-    <script src="script.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script type="module" src="js/app.js"></script>
     <!-- Копирайт -->
 <div class="footer-copyright">
     © 2026 Артем Брянцев. Все права защищены.

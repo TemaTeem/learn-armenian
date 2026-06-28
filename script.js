@@ -292,7 +292,7 @@ if (window.location.pathname.includes('game.html')) {
         const modeDiv = document.getElementById('mode-selection');
         if (modeDiv) {
             modeDiv.innerHTML = `
-                <h2>Выберите режим игры</h2>
+                <h2>Выберите режим тренировки</h2>
                 <div class="mode-cards">
                     <div class="mode-card" data-mode="RUS_ARM"><div class="mode-icon">${SVG_RUS_ARM}</div><h3>Русский → Армянский</h3><p>Вам показывают русское слово, нужно выбрать армянский перевод</p><button class="mode-btn">Выбрать</button></div>
                     <div class="mode-card" data-mode="ARM_RUS"><div class="mode-icon">${SVG_ARM_RUS}</div><h3>Армянский → Русский</h3><p>Вам показывают армянское слово, нужно выбрать русский перевод</p><button class="mode-btn">Выбрать</button></div>
@@ -330,11 +330,11 @@ if (window.location.pathname.includes('game.html')) {
             if (modeDiv) modeDiv.innerHTML = `<div class="loading-container"><p>📥 Загрузка слов...</p></div>`;
             await loadWords();
             if (wordsDatabase.length < 4) {
-                alert('Недостаточно слов для игры (минимум 4). Проверьте таблицу.');
+                alert('Недостаточно слов для тренировки (минимум 4). Проверьте таблицу.');
                 // Восстанавливаем меню
                 if (modeDiv) {
                     modeDiv.innerHTML = `
-                        <h2>Выберите режим игры</h2>
+                        <h2>Выберите режим тренировки</h2>
                         <div class="mode-cards">
                     <div class="mode-card" data-mode="RUS_ARM"><div class="mode-icon">${SVG_RUS_ARM}</div><h3>Русский → Армянский</h3><p>Вам показывают русское слово, нужно выбрать армянский перевод</p><button class="mode-btn">Выбрать</button></div>
                     <div class="mode-card" data-mode="ARM_RUS"><div class="mode-icon">${SVG_ARM_RUS}</div><h3>Армянский → Русский</h3><p>Вам показывают армянское слово, нужно выбрать русский перевод</p><button class="mode-btn">Выбрать</button></div>
@@ -482,7 +482,7 @@ if (window.location.pathname.includes('game.html')) {
                 // Восстанавливаем меню
                 if (modeDiv) {
                     modeDiv.innerHTML = `
-                        <h2>Выберите режим игры</h2>
+                        <h2>Выберите режим тренировки</h2>
                         <div class="mode-cards">
                     <div class="mode-card" data-mode="RUS_ARM"><div class="mode-icon">${SVG_RUS_ARM}</div><h3>Русский → Армянский</h3><p>Вам показывают русское слово, нужно выбрать армянский перевод</p><button class="mode-btn">Выбрать</button></div>
                     <div class="mode-card" data-mode="ARM_RUS"><div class="mode-icon">${SVG_ARM_RUS}</div><h3>Армянский → Русский</h3><p>Вам показывают армянское слово, нужно выбрать русский перевод</p><button class="mode-btn">Выбрать</button></div>
