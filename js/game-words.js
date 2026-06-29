@@ -60,7 +60,7 @@ export async function startWordMode(mode) {
   currentMode = mode;
   hideElement(modeSelection);
   showElement(gameArea);
-  modeBadge.innerHTML = mode === 'RUS_ARM' ? '🇷🇺 РУССКИЙ → АРМЯНСКИЙ 🇦🇲' : '🇦🇲 АРМЯНСКИЙ → РУССКИЙ 🇷🇺';
+  //modeBadge.innerHTML = mode === 'RUS_ARM' ? '🇷🇺 РУССКИЙ → АРМЯНСКИЙ 🇦🇲' : '🇦🇲 АРМЯНСКИЙ → РУССКИЙ 🇷🇺';
   // Скрыть переключатель направления алфавита (если был виден)
   const alphabetSwitch = document.getElementById('alphabet-direction-switch');
   if (alphabetSwitch) hideElement(alphabetSwitch);
